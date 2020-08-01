@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #ifndef SNEK_H
 #define SNEK_H
 
@@ -28,7 +30,9 @@ typedef struct s_food
 {
 	int pos_x;
 	int pos_y;
+	char icon;
 } s_food;
+
 
 void delay(int s);
 void gotoxy(int x, int y);
@@ -39,8 +43,7 @@ void print_board(char *bp, struct s_board b);
 char get_dir(struct s_snek s);
 struct s_segment newseg(struct s_segment *prevseg, struct s_snek s);
 
-int read_input(void);
+void game(int game_width, int game_height, int startlength);
 
-void game(void);
 
 #endif

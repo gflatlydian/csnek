@@ -2,16 +2,15 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
-#include <termios.h>
 #include <string.h>
+#include <curses.h>
 
 #include "snek.h"
 
 void delay(int ms)
 {
 	clock_t start_time = clock();
-	while (clock() < start_time + ms)
-		;
+	while (clock() < start_time + ms);
 }
 
 void gotoxy(int x, int y)
@@ -50,7 +49,6 @@ char *make_board(struct s_board b)
 
 void print_board(char *bp, struct s_board b)
 {
-	system("clear");
 	// print the play area to the screen
 	for (int y = 0; y < b.h + 2; y++)
 	{
@@ -114,42 +112,15 @@ struct s_segment newseg(struct s_segment *prevseg, struct s_snek s)
 	return nextseg;
 }
 
-int read_input(void)
+
+// the main game set up and loop
+void game(int game_width, int game_height, int startlength)
 {
-	int character;
-	struct termios orig_term_attr;
-	struct termios new_term_attr;
-
-	/* set the terminal to raw mode */
-	tcgetattr(fileno(stdin), &orig_term_attr);
-	memcpy(&new_term_attr, &orig_term_attr, sizeof(struct termios));
-	new_term_attr.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL);
-	new_term_attr.c_cc[VTIME] = 0;
-	new_term_attr.c_cc[VMIN] = 0;
-	tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
-
-	/* read a character from the stdin stream without blocking */
-	/*   returns EOF (-1) if no character is available */
-	character = fgetc(stdin);
-
-	/* restore the original terminal attributes */
-	tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
-
-	return character;
-}
-
-
-
-
-void game(void)
-{
-	int startlength;
 	int score;
-	startlength = 5;
 
 	struct s_board theboard;
-	theboard.w = 60;
-	theboard.h = 30;
+	theboard.w = game_width;
+	theboard.h = game_height;
 
 	struct s_segment thehead;
 
@@ -168,7 +139,7 @@ void game(void)
 	//make the head
 	snake_seg[0] = *thesnake.head;
 
-	//make the tail
+	//make the tail TODO: this probably doesn't actually allow the snake to grow as it eats
 	for (int l = 1; l < thesnake.length; l++)
 	{
 		snake_seg[l] = newseg(&snake_seg[l - 1], thesnake);
@@ -213,22 +184,37 @@ void game(void)
 			thesnake.alive = false;
 		}
 
-		int user_input = read_input();
+		//TODO: if you hit the tail, game over
+
+		int user_input = getch();
 		switch (user_input)
 		{
-		case 'w':
+		case '\e':
+			return;
+			break;
+		case KEY_UP:
+			if (thesnake.head->dir == 's') {
+				break;
+			}
 			thesnake.head->dir = 'n';
 			break;
-		case 'd':
+		case KEY_RIGHT:
+			if (thesnake.head->dir == 'w') {
+				break;
+			}
 			thesnake.head->dir = 'e';
 			break;
-		case 'a':
+		case KEY_LEFT:
+			if (thesnake.head->dir == 'e') {
+				break;
+			}
 			thesnake.head->dir = 'w';
 			break;
-		case 's':
+		case KEY_DOWN:
+			if (thesnake.head->dir == 'n') {
+				break;
+			}
 			thesnake.head->dir = 's';
-			break;
-		case EOF:
 			break;
 		}
 
@@ -237,7 +223,6 @@ void game(void)
 		temp_seg_1 = snake_seg[0];
 
 		//move the head
-
 		snake_seg[0].dir = thesnake.head->dir;
 		snake_seg[0].c = get_dir(thesnake);
 
@@ -267,22 +252,30 @@ void game(void)
 			temp_seg_1 = temp_seg_2;
 		}
 
-		delay(50000);
+		delay(75000);
 	}
 }
 
+// put it all together
 int main(int argc, char *argv[])
 {
-	system("clear");
-	system("stty -echo");
-	system("/bin/stty raw");
 
-	game();
+	initscr();					//start curses mode
+	cbreak();					//enter raw tty mode, but allow interrupts and control keys
+	keypad(stdscr, TRUE);		//enable reading of various keys, incl arrows, f-keys 
+	noecho();					//disable echoing
+	timeout(0);
 
-	system("/bin/stty cooked");
-	system("stty echo");
+	unsigned int w=60,h=30;
+	unsigned int l=5;
+	game(w, h, l);
 
-	printf("\nGame Over!\n");
+	printw("Game Over!");
+
+	timeout(-1);
+	getch();
+	endwin();
 
 	return 0;
 }
+
