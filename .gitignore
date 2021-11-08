@@ -1,0 +1,9 @@
+.vscode
+.vscode/tasks.json
+.vscode/launch.json
+
+a.out
+snek
+
+snek.dSYM
+snek.dSYM/Contents/Info.plist

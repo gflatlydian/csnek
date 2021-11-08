@@ -114,7 +114,7 @@ struct s_segment newseg(struct s_segment *prevseg, struct s_snek s)
 
 
 // the main game set up and loop
-void game(int game_width, int game_height, int startlength)
+int game(int game_width, int game_height, int startlength)
 {
 	int score;
 
@@ -123,6 +123,14 @@ void game(int game_width, int game_height, int startlength)
 	theboard.h = game_height;
 
 	struct s_segment thehead;
+
+	srand(time(NULL));
+
+	//initialise a food
+	struct s_food food;
+	food.c = '@';
+	food.pos_x = rand() % game_width;
+	food.pos_y = rand() % game_height;
 
 	//initialise the snake
 	struct s_snek thesnake;
@@ -166,6 +174,9 @@ void game(int game_width, int game_height, int startlength)
 			*(boardarray + ((theboard.w + 2) * y + x)) = snake_seg[l].c;
 		}
 
+		//put food on board
+		*(boardarray + ((theboard.w + 2) * food.pos_y + food.pos_x)) = food.c;
+
 		// print the board
 		if (thesnake.alive == true)
 		{
@@ -173,6 +184,16 @@ void game(int game_width, int game_height, int startlength)
 			score = thesnake.length - startlength;
 			gotoxy(0, theboard.h + 1);
 			printf("\nScore: %d\n", score);
+		}
+
+		//if you hit a food, increment score and relocate food
+		if (snake_seg[0].pos_x == food.pos_x && 
+			snake_seg[0].pos_y == food.pos_y) 
+		{
+			thesnake.length++;
+			food.pos_x = rand() % game_width;
+			food.pos_y = rand() % game_height;
+			snake_seg[thesnake.length] = newseg(&snake_seg[thesnake.length - 1], thesnake);
 		}
 
 		//if you've hit the wall, game over
@@ -184,13 +205,21 @@ void game(int game_width, int game_height, int startlength)
 			thesnake.alive = false;
 		}
 
-		//TODO: if you hit the tail, game over
+		//if you hit the tail, game over
+		for (int i = 1; i < thesnake.length; i++)
+		{
+			if (snake_seg[i].pos_x == snake_seg[0].pos_x &&
+				snake_seg[i].pos_y == snake_seg[0].pos_y) 
+			{
+				thesnake.alive = false;	
+			}
+		}
 
 		int user_input = getch();
 		switch (user_input)
 		{
 		case '\e':
-			return;
+			return(-1);
 			break;
 		case KEY_UP:
 			if (thesnake.head->dir == 's') {
@@ -252,8 +281,10 @@ void game(int game_width, int game_height, int startlength)
 			temp_seg_1 = temp_seg_2;
 		}
 
-		delay(75000);
+		delay(200000);
 	}
+
+	return(score);
 }
 
 // put it all together
@@ -264,17 +295,24 @@ int main(int argc, char *argv[])
 	cbreak();					//enter raw tty mode, but allow interrupts and control keys
 	keypad(stdscr, TRUE);		//enable reading of various keys, incl arrows, f-keys 
 	noecho();					//disable echoing
+	curs_set(0);				//disable the cursor
 	timeout(0);
 
-	unsigned int w=60,h=30;
+	unsigned int w=60,h=40;
 	unsigned int l=5;
-	game(w, h, l);
-
-	printw("Game Over!");
-
+	int game_end;
+	game_end = game(w, h, l);
+	gotoxy(w,h+2);
 	timeout(-1);
-	getch();
+	if (game_end == -1) {
+	} else {
+		printw("Game Over!\n");
+		getch();
+	}
+	curs_set(1);
 	endwin();
+
+	printf("Final score: %d\n", game_end);
 
 	return 0;
 }
