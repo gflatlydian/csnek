@@ -82,7 +82,7 @@ char get_dir(struct s_snek s)
 	}
 }
 
-struct s_segment newseg(struct s_segment *prevseg, struct s_snek s)
+struct s_segment newseg(struct s_segment *prevseg)
 {
 	struct s_segment nextseg;
 	nextseg.last = prevseg;
@@ -124,13 +124,13 @@ int game(int game_width, int game_height, int startlength)
 
 	struct s_segment thehead;
 
-	srand(time(NULL));
+	srand(time(NULL)); //seek rand();
 
 	//initialise a food
 	struct s_food food;
 	food.c = '@';
-	food.pos_x = rand() % game_width;
-	food.pos_y = rand() % game_height;
+	food.pos_x = rand() % (theboard.w - 2);
+	food.pos_y = rand() % (theboard.h - 2);
 
 	//initialise the snake
 	struct s_snek thesnake;
@@ -139,18 +139,37 @@ int game(int game_width, int game_height, int startlength)
 	thesnake.head = &thehead;
 	thesnake.head->pos_x = theboard.w / 2;
 	thesnake.head->pos_y = theboard.h / 2;
-	thesnake.head->dir = 'e'; // (n)orth, (e)ast, (s)outh, (w)est
+	int int_dir;					
+	int_dir = rand() % 4;		//start the snake facing a random direction
+	switch (int_dir)
+	{
+		case 0:
+			thesnake.head->dir = 'n'; // (n)orth, (e)ast, (s)outh, (w)est
+			break;
+		case 1:
+			thesnake.head->dir = 'e'; // (n)orth, (e)ast, (s)outh, (w)est
+			break;
+		case 2:
+			thesnake.head->dir = 's'; // (n)orth, (e)ast, (s)outh, (w)est
+			break;
+		case 3:
+			thesnake.head->dir = 'w'; // (n)orth, (e)ast, (s)outh, (w)est
+			break;
+		default:
+			return(-2);
+			break;
+	}
 	thesnake.head->c = get_dir(thesnake);
 
-	struct s_segment snake_seg[thesnake.length];
+	struct s_segment snake_seg[(theboard.w - 2) * (theboard.h - 2)]; //allocate enough memory for the snake to grow
 
 	//make the head
 	snake_seg[0] = *thesnake.head;
 
-	//make the tail TODO: this probably doesn't actually allow the snake to grow as it eats
+	//make the tail
 	for (int l = 1; l < thesnake.length; l++)
 	{
-		snake_seg[l] = newseg(&snake_seg[l - 1], thesnake);
+		snake_seg[l] = newseg(&snake_seg[l - 1]);
 	}
 
 	while (thesnake.alive == true)
@@ -175,7 +194,7 @@ int game(int game_width, int game_height, int startlength)
 		}
 
 		//put food on board
-		*(boardarray + ((theboard.w + 2) * food.pos_y + food.pos_x)) = food.c;
+		*(boardarray + ((theboard.w + 2) * (food.pos_y + 1) + (food.pos_x + 1))) = food.c;
 
 		// print the board
 		if (thesnake.alive == true)
@@ -187,13 +206,13 @@ int game(int game_width, int game_height, int startlength)
 		}
 
 		//if you hit a food, increment score and relocate food
-		if (snake_seg[0].pos_x == food.pos_x && 
-			snake_seg[0].pos_y == food.pos_y) 
+		if (snake_seg[0].pos_x == (food.pos_x + 1) && 
+			snake_seg[0].pos_y == (food.pos_y + 1)) 
 		{
 			thesnake.length++;
-			food.pos_x = rand() % game_width;
-			food.pos_y = rand() % game_height;
-			snake_seg[thesnake.length] = newseg(&snake_seg[thesnake.length - 1], thesnake);
+			food.pos_x = rand() % (game_width - 2);
+			food.pos_y = rand() % (game_height - 2);
+			snake_seg[thesnake.length] = newseg(&snake_seg[thesnake.length - 1]);
 		}
 
 		//if you've hit the wall, game over
@@ -219,7 +238,7 @@ int game(int game_width, int game_height, int startlength)
 		switch (user_input)
 		{
 		case '\e':
-			return(-1);
+			return(-1); //TODO: implement a pause menu
 			break;
 		case KEY_UP:
 			if (thesnake.head->dir == 's') {
@@ -254,6 +273,7 @@ int game(int game_width, int game_height, int startlength)
 		//move the head
 		snake_seg[0].dir = thesnake.head->dir;
 		snake_seg[0].c = get_dir(thesnake);
+		
 
 		switch (snake_seg[0].dir)
 		{
@@ -281,7 +301,7 @@ int game(int game_width, int game_height, int startlength)
 			temp_seg_1 = temp_seg_2;
 		}
 
-		delay(200000);
+		delay(75000);
 	}
 
 	return(score);
@@ -298,21 +318,44 @@ int main(int argc, char *argv[])
 	curs_set(0);				//disable the cursor
 	timeout(0);
 
-	unsigned int w=60,h=40;
-	unsigned int l=5;
+	unsigned int w, h, l;
+
+	if (argv[1]!=NULL && argv[2]!=NULL) 
+	{
+		w=atoi(argv[1]);
+		h=atoi(argv[2]);
+	} 
+	else 
+	{
+		w=60;
+		h=40;
+	}
+	
+	if (argv[3]!=NULL)
+	{
+		l=atoi(argv[3]);
+	}
+	else
+	{
+		l=6;
+	}
+
 	int game_end;
 	game_end = game(w, h, l);
 	gotoxy(w,h+2);
 	timeout(-1);
-	if (game_end == -1) {
-	} else {
+	if (game_end != -1) {
 		printw("Game Over!\n");
 		getch();
+		curs_set(1);
+		endwin();
+		printf("Final score: %d\n", game_end);
+	} else {
+		curs_set(1);
+		endwin();
+		printf("You quit, or something went wrong!\n");
+		//printf("Final score: %d\n", game_end);
 	}
-	curs_set(1);
-	endwin();
-
-	printf("Final score: %d\n", game_end);
 
 	return 0;
 }

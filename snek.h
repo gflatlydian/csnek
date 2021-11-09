@@ -40,7 +40,7 @@ char *make_board(struct s_board b);
 void print_board(char *bp, struct s_board b);
 
 char get_dir(struct s_snek s);
-struct s_segment newseg(struct s_segment *prevseg, struct s_snek s);
+struct s_segment newseg(struct s_segment *prevseg);
 
 int game(int game_width, int game_height, int startlength);
 
